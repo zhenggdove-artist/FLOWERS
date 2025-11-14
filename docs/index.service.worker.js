@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1763142692|10501553463';
+const CACHE_VERSION = '1763144217|12025711266';
 /** @type {string} */
 const CACHE_PREFIX = '殖民之花-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
