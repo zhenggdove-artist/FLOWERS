@@ -31,7 +31,28 @@
 			z-index: 1;
 		}
 
-		/* Canvas 前景 - 繪製對焦框和方塊 */
+		/* 半透明參考圖片 - 引導層 */
+		#referenceImage {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			z-index: 5;
+			opacity: 0.3;
+			pointer-events: none;
+			display: none;
+			background-position: center;
+			background-repeat: no-repeat;
+			background-size: contain;
+		}
+
+		#referenceImage.active {
+			display: block;
+		}
+
+		/* Canvas 前景 - 繪製花朵 */
 		#canvas {
 			position: fixed;
 			top: 0;
@@ -121,7 +142,6 @@
 			justify-content: center;
 			padding: 0;
 			margin: 0;
-			transform-origin: center;
 		}
 
 		#captureBtn.active {
@@ -139,19 +159,42 @@
 			left: 50%;
 			transform: translateX(-50%);
 			color: white;
-			font-size: 32px;
+			font-size: 24px;
 			font-weight: bold;
 			text-shadow: 0 3px 12px rgba(0,0,0,0.9);
-			background: rgba(0,0,0,0.4);
-			padding: 15px 30px;
-			border-radius: 30px;
+			background: rgba(0,0,0,0.5);
+			padding: 12px 25px;
+			border-radius: 25px;
 			backdrop-filter: blur(15px);
 			-webkit-backdrop-filter: blur(15px);
 			z-index: 20;
 			display: none;
+			text-align: center;
 		}
 
 		#topTitle.active {
+			display: block;
+		}
+
+		/* 切換參考圖按鈕 */
+		#toggleRef {
+			position: fixed;
+			top: 120px;
+			right: 20px;
+			background: rgba(255,255,255,0.25);
+			color: white;
+			border: 2px solid rgba(255,255,255,0.5);
+			border-radius: 20px;
+			padding: 10px 18px;
+			font-size: 14px;
+			z-index: 20;
+			display: none;
+			backdrop-filter: blur(10px);
+			-webkit-backdrop-filter: blur(10px);
+			cursor: pointer;
+		}
+
+		#toggleRef.active {
 			display: block;
 		}
 
@@ -187,11 +230,17 @@
 	<!-- 相機 video -->
 	<video id="video" autoplay playsinline muted></video>
 
+	<!-- 半透明參考圖片 -->
+	<div id="referenceImage"></div>
+
 	<!-- Canvas 前景 -->
 	<canvas id="canvas"></canvas>
 
 	<!-- 頂部標題 -->
-	<div id="topTitle">🌸 AR 殖民之花</div>
+	<div id="topTitle">🌸 對齊場景後拍照<br><small style="font-size:14px; opacity:0.8;">花朵會生成在固定位置</small></div>
+
+	<!-- 切換參考圖按鈕 -->
+	<button id="toggleRef">👁️ 參考圖</button>
 
 	<!-- 拍照按鈕 -->
 	<button id="captureBtn">📷</button>
@@ -206,9 +255,30 @@
 		const titleEl = document.querySelector('.title');
 		const captureBtn = document.getElementById('captureBtn');
 		const topTitle = document.getElementById('topTitle');
+		const referenceImg = document.getElementById('referenceImage');
+		const toggleRefBtn = document.getElementById('toggleRef');
 
 		let flowers = [];
 		let animationRunning = false;
+		let showReference = true;
+
+		// ============================================
+		// 花朵生成位置設定（相對於畫面的百分比）
+		// 根據你的參考照片調整這些位置
+		// ============================================
+		const flowerSpots = [
+			// 格式：{ x: 水平(0-1), y: 垂直(0-1), name: '位置名稱' }
+			{ x: 0.35, y: 0.65, name: '椅子左側' },
+			{ x: 0.55, y: 0.62, name: '椅子上' },
+			{ x: 0.45, y: 0.75, name: '椅子前方地板' },
+			{ x: 0.72, y: 0.68, name: '桌子旁' },
+			{ x: 0.25, y: 0.55, name: '牆壁畫作下方' },
+			{ x: 0.8, y: 0.55, name: '窗戶旁' },
+			{ x: 0.5, y: 0.8, name: '地板中央' },
+			{ x: 0.65, y: 0.58, name: '椅背上' },
+		];
+
+		let currentSpotIndex = 0;
 
 		// Canvas 尺寸
 		function resizeCanvas() {
@@ -218,40 +288,42 @@
 		window.addEventListener('resize', resizeCanvas);
 		resizeCanvas();
 
-		// 繪製 UI
+		// ============================================
+		// 設定參考圖片
+		// 你可以用以下三種方式：
+		// ============================================
+
+		// 方式 1：使用你拍的照片（需要上傳到網路）
+		// referenceImg.style.backgroundImage = 'url(你的圖片網址.jpg)';
+
+		// 方式 2：使用半透明網格作為示意（目前使用）
+		referenceImg.style.background = `
+			repeating-linear-gradient(
+				0deg,
+				rgba(255,255,255,0.08) 0px,
+				rgba(255,255,255,0.08) 1px,
+				transparent 1px,
+				transparent 40px
+			),
+			repeating-linear-gradient(
+				90deg,
+				rgba(255,255,255,0.08) 0px,
+				rgba(255,255,255,0.08) 1px,
+				transparent 1px,
+				transparent 40px
+			)
+		`;
+
+		// 方式 3：使用 base64 內嵌圖片（將圖片轉換後貼在這裡）
+		// referenceImg.style.backgroundImage = 'url(data:image/jpeg;base64,...)';
+
+		// 繪製花朵
 		function draw() {
 			if (!animationRunning) return;
 
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-			// 對焦框
-			const cx = canvas.width / 2;
-			const cy = canvas.height / 2;
-			const size = 60;
-
-			ctx.strokeStyle = 'rgba(255, 220, 0, 0.95)';
-			ctx.lineWidth = 5;
-			ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-			ctx.shadowBlur = 10;
-
-			ctx.beginPath();
-			ctx.moveTo(cx - size, cy);
-			ctx.lineTo(cx + size, cy);
-			ctx.stroke();
-
-			ctx.beginPath();
-			ctx.moveTo(cx, cy - size);
-			ctx.lineTo(cx, cy + size);
-			ctx.stroke();
-
-			ctx.fillStyle = 'rgba(255, 220, 0, 0.95)';
-			ctx.beginPath();
-			ctx.arc(cx, cy, 8, 0, Math.PI * 2);
-			ctx.fill();
-
-			ctx.shadowBlur = 0;
-
-			// 花朵
+			// 繪製所有花朵
 			flowers.forEach(f => {
 				const s = 80 * f.scale;
 				ctx.save();
@@ -282,7 +354,7 @@
 			requestAnimationFrame(draw);
 		}
 
-		// 啟動相機 - 完全使用 test_camera.html 的邏輯
+		// 啟動相機 - 使用 test_camera.html 的成功邏輯
 		button.addEventListener('click', async () => {
 			status.textContent = '正在請求相機權限...';
 
@@ -299,15 +371,16 @@
 				startBg.classList.add('hidden');
 				titleEl.classList.add('hidden');
 
-				// 顯示拍照 UI
+				// 顯示 UI
 				captureBtn.classList.add('active');
 				topTitle.classList.add('active');
+				referenceImg.classList.add('active');
+				toggleRefBtn.classList.add('active');
 
 				// 開始繪製
 				animationRunning = true;
 				draw();
 
-				// 隱藏狀態訊息
 				setTimeout(() => {
 					status.style.display = 'none';
 				}, 2000);
@@ -318,13 +391,23 @@
 			}
 		});
 
-		// 拍照
-		captureBtn.addEventListener('click', () => {
-			const cx = canvas.width / 2;
-			const cy = canvas.height / 2;
-			const ox = (Math.random() - 0.5) * 50;
-			const oy = (Math.random() - 0.5) * 50;
+		// 切換參考圖顯示/隱藏
+		toggleRefBtn.addEventListener('click', () => {
+			showReference = !showReference;
+			referenceImg.style.opacity = showReference ? '0.3' : '0';
+			toggleRefBtn.textContent = showReference ? '👁️ 參考圖' : '👁️‍🗨️ 參考圖';
+		});
 
+		// 拍照 - 在固定位置生成花朵（不跟隨黃色十字）
+		captureBtn.addEventListener('click', () => {
+			// 取得當前生成位置
+			const spot = flowerSpots[currentSpotIndex % flowerSpots.length];
+
+			// 計算實際像素位置
+			const x = canvas.width * spot.x;
+			const y = canvas.height * spot.y;
+
+			// 隨機顏色
 			const colors = [
 				'rgba(255,100,150,0.9)',
 				'rgba(150,100,255,0.9)',
@@ -334,15 +417,20 @@
 				'rgba(255,255,100,0.9)'
 			];
 
+			// 建立花朵
 			flowers.push({
-				x: cx + ox,
-				y: cy + oy,
+				x: x,
+				y: y,
 				color: colors[Math.floor(Math.random() * colors.length)],
 				scale: 0.3,
-				alpha: 0
+				alpha: 0,
+				spot: spot.name
 			});
 
-			// 閃光
+			// 移到下一個位置
+			currentSpotIndex++;
+
+			// 閃光效果
 			const flash = document.createElement('div');
 			flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:100;pointer-events:none;opacity:0.95;';
 			document.body.appendChild(flash);
@@ -352,7 +440,30 @@
 				setTimeout(() => flash.remove(), 500);
 			}, 100);
 
-			console.log('花朵:', flowers.length);
+			// 提示訊息
+			const msg = document.createElement('div');
+			msg.style.cssText = `
+				position: fixed;
+				top: 150px;
+				left: 50%;
+				transform: translateX(-50%);
+				background: rgba(0,0,0,0.85);
+				color: white;
+				padding: 15px 30px;
+				border-radius: 25px;
+				z-index: 30;
+				font-size: 18px;
+				box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+			`;
+			msg.textContent = `✨ ${spot.name}`;
+			document.body.appendChild(msg);
+			setTimeout(() => {
+				msg.style.transition = 'opacity 0.5s';
+				msg.style.opacity = '0';
+				setTimeout(() => msg.remove(), 500);
+			}, 1500);
+
+			console.log('🌸 花朵生成:', spot.name, '總數:', flowers.length);
 		});
 	</script>
 </body>
