@@ -295,11 +295,44 @@
 		// 設定參考圖片 - 使用你提供的照片
 		// ============================================
 
-		// 使用本地圖片檔案（將你的照片命名為 reference.jpg 放在同一資料夾）
-		referenceImg.style.backgroundImage = 'url(reference.jpg)';
+		// 測試圖片是否載入成功
+		const testImg = new Image();
+		testImg.onload = () => {
+			console.log('✅ 參考圖片載入成功！');
+			referenceImg.style.backgroundImage = 'url(reference.jpg)';
+			referenceImg.style.display = 'block'; // 強制顯示
+		};
+		testImg.onerror = () => {
+			console.error('❌ 參考圖片載入失敗！');
+			console.error('請確認：');
+			console.error('1. reference.jpg 是否在同一資料夾');
+			console.error('2. 檔名是否正確（注意大小寫）');
+			console.error('3. 圖片格式是否正確');
 
-		// 如果圖片名稱不同，修改上面這行：
-		// referenceImg.style.backgroundImage = 'url(你的圖片檔名.jpg)';
+			// 載入失敗時使用紅色網格提示
+			referenceImg.style.background = `
+				repeating-linear-gradient(
+					0deg,
+					rgba(255,100,100,0.3) 0px,
+					rgba(255,100,100,0.3) 2px,
+					transparent 2px,
+					transparent 50px
+				),
+				repeating-linear-gradient(
+					90deg,
+					rgba(255,100,100,0.3) 0px,
+					rgba(255,100,100,0.3) 2px,
+					transparent 2px,
+					transparent 50px
+				)
+			`;
+			referenceImg.style.display = 'block';
+
+			status.textContent = '⚠️ 找不到 reference.jpg';
+			status.style.display = 'block';
+			status.style.background = 'rgba(255,0,0,0.8)';
+		};
+		testImg.src = 'reference.jpg';
 
 		// 繪製花朵
 		function draw() {
