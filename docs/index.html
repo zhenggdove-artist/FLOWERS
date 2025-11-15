@@ -292,33 +292,14 @@
 		resizeCanvas();
 
 		// ============================================
-		// 設定參考圖片
-		// 你可以用以下三種方式：
+		// 設定參考圖片 - 使用你提供的照片
 		// ============================================
 
-		// 方式 1：使用你拍的照片（需要上傳到網路）
-		// referenceImg.style.backgroundImage = 'url(你的圖片網址.jpg)';
+		// 使用本地圖片檔案（將你的照片命名為 reference.jpg 放在同一資料夾）
+		referenceImg.style.backgroundImage = 'url(reference.jpg)';
 
-		// 方式 2：使用半透明網格作為示意（目前使用）
-		referenceImg.style.background = `
-			repeating-linear-gradient(
-				0deg,
-				rgba(255,255,255,0.08) 0px,
-				rgba(255,255,255,0.08) 1px,
-				transparent 1px,
-				transparent 40px
-			),
-			repeating-linear-gradient(
-				90deg,
-				rgba(255,255,255,0.08) 0px,
-				rgba(255,255,255,0.08) 1px,
-				transparent 1px,
-				transparent 40px
-			)
-		`;
-
-		// 方式 3：使用 base64 內嵌圖片（將圖片轉換後貼在這裡）
-		// referenceImg.style.backgroundImage = 'url(data:image/jpeg;base64,...)';
+		// 如果圖片名稱不同，修改上面這行：
+		// referenceImg.style.backgroundImage = 'url(你的圖片檔名.jpg)';
 
 		// 繪製花朵
 		function draw() {
