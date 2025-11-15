@@ -176,25 +176,26 @@
 			display: block;
 		}
 
-		/* 切換參考圖按鈕 */
-		#toggleRef {
+		/* 花朵計數器 */
+		#flowerCounter {
 			position: fixed;
 			top: 120px;
-			right: 20px;
-			background: rgba(255,255,255,0.25);
+			left: 50%;
+			transform: translateX(-50%);
+			background: rgba(0,0,0,0.7);
 			color: white;
-			border: 2px solid rgba(255,255,255,0.5);
+			border: 2px solid rgba(255,255,255,0.4);
 			border-radius: 20px;
-			padding: 10px 18px;
-			font-size: 14px;
+			padding: 10px 20px;
+			font-size: 18px;
+			font-weight: bold;
 			z-index: 20;
 			display: none;
 			backdrop-filter: blur(10px);
 			-webkit-backdrop-filter: blur(10px);
-			cursor: pointer;
 		}
 
-		#toggleRef.active {
+		#flowerCounter.active {
 			display: block;
 		}
 
@@ -237,10 +238,10 @@
 	<canvas id="canvas"></canvas>
 
 	<!-- 頂部標題 -->
-	<div id="topTitle">🌸 對齊場景後拍照<br><small style="font-size:14px; opacity:0.8;">花朵會生成在固定位置</small></div>
+	<div id="topTitle">🌸 對齊參考圖後拍照<br><small style="font-size:14px; opacity:0.8;">讓相機畫面與半透明圖對齊</small></div>
 
-	<!-- 切換參考圖按鈕 -->
-	<button id="toggleRef">👁️ 參考圖</button>
+	<!-- 花朵計數器 -->
+	<div id="flowerCounter">🌸 0/10</div>
 
 	<!-- 拍照按鈕 -->
 	<button id="captureBtn">📷</button>
@@ -256,11 +257,11 @@
 		const captureBtn = document.getElementById('captureBtn');
 		const topTitle = document.getElementById('topTitle');
 		const referenceImg = document.getElementById('referenceImage');
-		const toggleRefBtn = document.getElementById('toggleRef');
+		const flowerCounter = document.getElementById('flowerCounter');
 
 		let flowers = [];
 		let animationRunning = false;
-		let showReference = true;
+		const MAX_FLOWERS = 10;
 
 		// ============================================
 		// 花朵生成位置設定（相對於畫面的百分比）
@@ -276,6 +277,8 @@
 			{ x: 0.8, y: 0.55, name: '窗戶旁' },
 			{ x: 0.5, y: 0.8, name: '地板中央' },
 			{ x: 0.65, y: 0.58, name: '椅背上' },
+			{ x: 0.4, y: 0.5, name: '椅子右側' },
+			{ x: 0.6, y: 0.7, name: '地板右側' },
 		];
 
 		let currentSpotIndex = 0;
@@ -375,7 +378,7 @@
 				captureBtn.classList.add('active');
 				topTitle.classList.add('active');
 				referenceImg.classList.add('active');
-				toggleRefBtn.classList.add('active');
+				flowerCounter.classList.add('active');
 
 				// 開始繪製
 				animationRunning = true;
@@ -391,17 +394,75 @@
 			}
 		});
 
-		// 切換參考圖顯示/隱藏
-		toggleRefBtn.addEventListener('click', () => {
-			showReference = !showReference;
-			referenceImg.style.opacity = showReference ? '0.3' : '0';
-			toggleRefBtn.textContent = showReference ? '👁️ 參考圖' : '👁️‍🗨️ 參考圖';
-		});
+		// 更新花朵計數器
+		function updateFlowerCounter() {
+			flowerCounter.textContent = `🌸 ${flowers.length}/${MAX_FLOWERS}`;
 
-		// 拍照 - 在固定位置生成花朵（不跟隨黃色十字）
+			// 當達到10朵花時，參考圖變成不透明
+			if (flowers.length >= MAX_FLOWERS) {
+				referenceImg.style.transition = 'opacity 1.5s';
+				referenceImg.style.opacity = '1.0';
+
+				// 顯示完成訊息
+				setTimeout(() => {
+					const msg = document.createElement('div');
+					msg.style.cssText = `
+						position: fixed;
+						top: 50%;
+						left: 50%;
+						transform: translate(-50%, -50%);
+						background: rgba(102,126,234,0.95);
+						color: white;
+						padding: 30px 50px;
+						border-radius: 30px;
+						z-index: 100;
+						font-size: 28px;
+						font-weight: bold;
+						text-align: center;
+						box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+					`;
+					msg.innerHTML = '🌸<br>殖民完成！<br><small style="font-size:16px; opacity:0.9;">所有花朵已綻放</small>';
+					document.body.appendChild(msg);
+
+					setTimeout(() => {
+						msg.style.transition = 'opacity 1s';
+						msg.style.opacity = '0';
+						setTimeout(() => msg.remove(), 1000);
+					}, 3000);
+				}, 1500);
+			}
+		}
+
+		// 拍照 - 在固定位置生成花朵
 		captureBtn.addEventListener('click', () => {
+			// 檢查是否已達到花朵上限
+			if (flowers.length >= MAX_FLOWERS) {
+				const msg = document.createElement('div');
+				msg.style.cssText = `
+					position: fixed;
+					top: 150px;
+					left: 50%;
+					transform: translateX(-50%);
+					background: rgba(255,100,100,0.9);
+					color: white;
+					padding: 15px 30px;
+					border-radius: 25px;
+					z-index: 30;
+					font-size: 18px;
+					box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+				`;
+				msg.textContent = '⚠️ 已完成！所有花朵已綻放';
+				document.body.appendChild(msg);
+				setTimeout(() => {
+					msg.style.transition = 'opacity 0.5s';
+					msg.style.opacity = '0';
+					setTimeout(() => msg.remove(), 500);
+				}, 1500);
+				return;
+			}
+
 			// 取得當前生成位置
-			const spot = flowerSpots[currentSpotIndex % flowerSpots.length];
+			const spot = flowerSpots[currentSpotIndex];
 
 			// 計算實際像素位置
 			const x = canvas.width * spot.x;
@@ -429,6 +490,9 @@
 
 			// 移到下一個位置
 			currentSpotIndex++;
+
+			// 更新花朵計數器
+			updateFlowerCounter();
 
 			// 閃光效果
 			const flash = document.createElement('div');
